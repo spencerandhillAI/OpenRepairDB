@@ -1,6 +1,7 @@
 import {normalizeImport,inspectImport,suggestImport,saveImport,type Kind,type Mode} from "@/lib/admin-entity-import";
 import { extractHtmlGuide } from "@/lib/html-guide-extractor";
 import { NextRequest,NextResponse } from "next/server";
+import {pool} from "@/lib/db";
 import {adminAuthorized,safeFetch} from "@/lib/admin-import";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -21,6 +22,10 @@ export async function POST(req:NextRequest){
  if(Number(req.headers.get("content-length")||0)>1_100_000)return NextResponse.json({error:"Anfrage zu groß."},{status:413});
  const input=await req.json();
  if(!adminAuthorized(input.password))return NextResponse.json({error:"Administrator-Zugang verweigert."},{status:403,headers:{"Cache-Control":"no-store"}});
+ if(input.action==="manufacturers"){
+  const rows=await pool.query("SELECT name FROM manufacturers ORDER BY name ASC LIMIT 1000");
+  return NextResponse.json({manufacturers:rows.rows.map((row:{name:string})=>row.name)},{headers:{"Cache-Control":"no-store"}});
+ }
  if(input.action==="fetch"){
  const url=String(input.url||"");
  const result=await safeFetch(url);
@@ -32,7 +37,10 @@ export async function POST(req:NextRequest){
  }
  const kind=input.kind as Kind;
  if(!["device","board","component","repair"].includes(kind))return NextResponse.json({error:"Bitte Importtyp auswählen."},{status:400});
- const record=normalizeImport(kind,input.data);
+ const raw=input.data;
+ if(!raw||typeof raw!=="object"||Array.isArray(raw))return NextResponse.json({error:"JSON-Objekt erforderlich."},{status:400});
+ const manufacturer=String(input.manufacturer||"").trim();
+ const record=normalizeImport(kind,kind==="repair"?raw:{...raw,manufacturer:manufacturer||String(raw.manufacturer||"").trim()});
  const matches=await inspectImport(kind,record);
  const suggestions=input.action==="preview"?await suggestImport(kind,record):[];
  if(input.action==="preview")return NextResponse.json({data:record,matches,suggestions,warning:matches.length>1?"Mehrdeutige Dubletten – Import gesperrt.":matches.length===1?"Vorhandener Datensatz erkannt. Ergänzen möglich.":"Kein vorhandener Datensatz erkannt. Neuanlage möglich."});
