@@ -1,0 +1,40 @@
+# OpenRepairDB test stack for Portainer Git deployment.
+# Configure POSTGRES_PASSWORD in Portainer stack environment variables.
+# Use a long random alphanumeric password so it is safe in the DATABASE_URL.
+services:
+  db:
+    image: ghcr.io/spencerandhillai/openrepairdb-postgres:develop
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: openrepairdb
+      POSTGRES_USER: openrepairdb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Portainer stack environment}
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openrepairdb -d openrepairdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  web:
+    image: ghcr.io/spencerandhillai/openrepairdb:develop
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://openrepairdb:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Portainer stack environment}@db:5432/openrepairdb
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3001:3000"
+    networks:
+      - internal
+
+networks:
+  internal:
+
+volumes:
+  test_postgres_data:
