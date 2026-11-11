@@ -19,7 +19,8 @@ export function normalizeImport(kind:Kind,raw:unknown){
 }
 async function find(db:PoolClient,kind:Kind,r:Obj){
  const manufacturer=key(String(r.manufacturer||""));
- const name=key(String(r.name)).replace(new RegExp("^"+manufacturer.replace(/[.*+?^${}()|[\\]\\\\]/g,"\\\\const name=key(String(r.name)),manufacturer=key(String(r.manufacturer||""));")+"\\\\s+"),"");
+ const rawName=key(String(r.name));
+ const name=manufacturer&&rawName.startsWith(manufacturer+" ")?rawName.slice(manufacturer.length+1):rawName;
  if(kind==="device")return (await db.query(`SELECT d.id,d.canonical_model_name AS name FROM devices d LEFT JOIN manufacturers m ON m.id=d.manufacturer_id WHERE lower(regexp_replace(trim(d.canonical_model_name),'\\s+',' ','g')) IN ($1,$3) AND lower(coalesce(m.name,''))=$2 ORDER BY d.id`,[name,manufacturer,manufacturer+" "+name])).rows;
  if(kind==="board")return (await db.query(`SELECT b.id,b.board_identifier_original AS name FROM boards b LEFT JOIN manufacturers m ON m.id=b.manufacturer_id WHERE lower(trim(b.board_identifier_normalized))=$1 AND lower(coalesce(m.name,''))=$2 ORDER BY b.id`,[name,manufacturer])).rows;
  if(kind==="component")return (await db.query(`SELECT c.id,c.part_number_original AS name FROM components c LEFT JOIN manufacturers m ON m.id=c.manufacturer_id WHERE lower(trim(c.part_number_normalized))=$1 AND lower(coalesce(m.name,''))=$2 ORDER BY c.id`,[name,manufacturer])).rows;
