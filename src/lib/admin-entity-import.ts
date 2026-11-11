@@ -35,7 +35,7 @@ export async function suggestImport(kind:Kind,r:Obj){
  repair:"SELECT id,title AS name,NULL::text AS manufacturer,similarity(lower(title),$1) AS score FROM repair_cases WHERE lower(title) % $1 ORDER BY score DESC LIMIT 8"
  };
  const db=await pool.connect();
- try{return (await db.query(queries[kind],[name,man,man+" "+name])).rows.filter(x=>Number(x.score)>=0.3);}
+ try{return (await db.query(queries[kind],kind==="device"?[name,man,man+" "+name]:kind==="repair"?[name]:[name,man])).rows.filter(x=>Number(x.score)>=0.3);}
  finally{db.release();}
 }
 export async function inspectImport(kind:Kind,r:Obj){
