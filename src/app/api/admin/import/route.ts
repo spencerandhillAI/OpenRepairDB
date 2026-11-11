@@ -1,3 +1,4 @@
+import { extractHtmlGuide } from "@/lib/html-guide-extractor";
 import { NextRequest,NextResponse } from "next/server";
 import {adminAuthorized,normalizeGuide,safeFetch,inspect,save} from "@/lib/admin-import";
 export const runtime="nodejs";
@@ -25,10 +26,8 @@ export async function POST(req:NextRequest){
  if(result.type.includes("json") || result.body.trimStart().startsWith("{")){
  const data=JSON.parse(result.body);return NextResponse.json({data:normalizeGuide(data)});
  }
- // HTML is untrusted and cannot be automatically turned into verified technical specifications.
- const title=result.body.match(/<title[^>]*>([^<]{1,300})<\/title>/i)?.[1]?.trim()||"";
- const description=result.body.match(/<meta\s+[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i)?.[1]||"";
- return NextResponse.json({htmlPreview:{title,description,sourceUrl:url},notice:"HTML-Quelle erkannt. Bitte technische Fakten anhand der Originaldokumentation in JSON erfassen und vor dem Import prüfen."});
+ const extracted=extractHtmlGuide(result.body,url);
+ return NextResponse.json({data:extracted,notice:"HTML-Auswertung: technische Tabellen und Dokumentationslinks wurden übernommen, soweit im HTML vorhanden. Bitte Modell, Angaben und Quelle prüfen. Leere Felder werden nicht erfunden."});
  }
  const guide=normalizeGuide(input.data);
  const matches=await inspect(guide);
