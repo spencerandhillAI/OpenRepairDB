@@ -1,6 +1,7 @@
+import {normalizeImport,inspectImport,saveImport,type Kind,type Mode} from "@/lib/admin-entity-import";
 import { extractHtmlGuide } from "@/lib/html-guide-extractor";
 import { NextRequest,NextResponse } from "next/server";
-import {adminAuthorized,normalizeGuide,safeFetch,inspect,save} from "@/lib/admin-import";
+import {adminAuthorized,safeFetch} from "@/lib/admin-import";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export async function POST(req:NextRequest){
@@ -29,13 +30,17 @@ export async function POST(req:NextRequest){
  const extracted=extractHtmlGuide(result.body,url);
  return NextResponse.json({data:extracted,notice:"HTML-Auswertung: technische Tabellen und Dokumentationslinks wurden übernommen, soweit im HTML vorhanden. Bitte Modell, Angaben und Quelle prüfen. Leere Felder werden nicht erfunden."});
  }
- const guide=normalizeGuide(input.data);
- const matches=await inspect(guide);
- if(input.action==="preview")return NextResponse.json({data:guide,matches,warning:matches.length===0?"Gerät fehlt in der Datenbank.":matches.some(x=>x.has_documentation)?"Bereits dokumentiertes Gerät erkannt.":null});
+ const kind=input.kind as Kind;
+ if(!["device","board","component","repair"].includes(kind))return NextResponse.json({error:"Bitte Importtyp auswählen."},{status:400});
+ const record=normalizeImport(kind,input.data);
+ const matches=await inspectImport(kind,record);
+ if(input.action==="preview")return NextResponse.json({data:record,matches,warning:matches.length>1?"Mehrdeutige Dubletten – Import gesperrt.":matches.length===1?"Vorhandener Datensatz erkannt. Ergänzen möglich.":"Kein vorhandener Datensatz erkannt. Neuanlage möglich."});
  if(input.action==="save"){
- if(input.confirm!==true)return NextResponse.json({error:"Explizite Bestätigung erforderlich."},{status:400});
- const id=await save(guide);
- return NextResponse.json({saved:true,deviceId:id,reviewStatus:"pending"});
+  if(input.confirm!==true)return NextResponse.json({error:"Explizite Bestätigung erforderlich."},{status:400});
+  const mode=input.mode as Mode;
+  if(mode!=="create"&&mode!=="enrich")return NextResponse.json({error:"Bitte Neuanlage oder Ergänzung auswählen."},{status:400});
+  const result=await saveImport(kind,mode,record);
+  return NextResponse.json({saved:true,...result});
  }
  return NextResponse.json({error:"Unbekannte Aktion."},{status:400});
  }catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Import fehlgeschlagen."},{status:400,headers:{"Cache-Control":"no-store"}});}
