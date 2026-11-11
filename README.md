@@ -22,6 +22,9 @@ OpenRepairDB connects repair knowledge across device models, manufacturers, circ
 - [Project scope](docs/PROJECT_SCOPE.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Data model](docs/DATA_MODEL.md)
+- [Technology decisions](docs/STACK_DECISIONS.md)
+- [Licensing policy](docs/LICENSING.md)
+- [Unraid deployment](docs/UNRAID.md)
 - [Contributing](CONTRIBUTING.md)
 
 ## Initial technical direction
@@ -30,7 +33,7 @@ The first implementation will favour a small Docker-based deployment:
 
 - PostgreSQL as the system of record.
 - PostgreSQL full-text search and trigram matching initially.
-- A responsive web application with device-centric pages.
+- A responsive Next.js + TypeScript web application with device-centric pages.
 - Persistent file storage, abstracted so it can later move to S3-compatible storage.
 - Background import and AI-assisted extraction only after provenance, review and licensing rules are in place.
 
