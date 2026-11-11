@@ -28,7 +28,7 @@ export function extractHtmlGuide(html:string,url:string){
  for(const match of html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)){
   const label=clean(match[2]).slice(0,200);let href="";
   try{const u=new URL(decode(match[1]),url);if(u.protocol==="https:")href=u.toString();}catch{}
-  if(href&&/pinout|schematic|datasheet|schaltplan|documentation|hardware|technical|download/i.test(label+" "+href)&&!links.some(x=>x.url===href))links.push({label:label||"Dokumentation",url:href});
+  if(href&&/pinout|schematic|datasheet|schaltplan|technical|download|\\.pdf(?:$|[?#])/i.test(label+" "+href)&&!links.some(x=>x.url===href))links.push({label:label||"Dokumentation",url:href});
   if(links.length===30)break;
  }
  return {model,overview,sourceUrl:url,capabilities:[],specifications:specs.slice(0,100),pinGroups:[],safety:[],links,extraction:{method:"html-tables-and-description",foundSpecifications:specs.length,foundLinks:links.length,reviewRequired:true,notes:"Nur sichtbare HTML-Tabellen, Beschreibungen und Dokumentationslinks extrahiert. Keine Pinbelegung aus Vermutungen generiert."}};
