@@ -42,3 +42,7 @@ User prefers concise German, concrete Portainer/Unraid GUI instructions. Assista
 ## Manufacturer autocomplete mobile fix
 - User reported browser-native datalist did not display suggestions on Android/Vivaldi after typing `Ard`.
 - Replaced datalist with an explicit, visible, filtered list of clickable manufacturer suggestions, including keyboard Enter/Escape handling. Commit a1de7855; runtime validation pending.
+
+## Import outcome verified and status UI updated
+- User confirmed Arduino UNO R3 DEV-000001 enrichment succeeded after running `node scripts/migrate-device-documentation.mjs`; UI displayed `Gespeichert: DEV-000001 (ergänzt). Prüfstatus: pending.`
+- Import success/failure messages changed to prominent green/red high-contrast bordered panels with accessible live regions; committed, deployment test pending.
