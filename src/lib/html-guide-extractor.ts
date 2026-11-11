@@ -3,7 +3,7 @@
  */
 const decode=(s:string)=>s.replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16)));
 const clean=(s:string)=>decode(s.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi," ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi," ").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim());
-const meta=(html:string,name:string)=>{const tags=html.match(/<meta\b[^>]*>/gi)||[];for(const tag of tags){if(new RegExp('(?:name|property)=["\\\']'+name+'["\\\']','i').test(tag))return clean(tag.match(/content=["']([^"']*)["']/i)?.[1]||"");}return "";};
+const meta=(html:string,name:string)=>{const tags=html.match(/<meta\\b[^>]*>/gi)||[];for(const tag of tags){const key=tag.match(/(?:name|property)=["']([^"']+)["']/i)?.[1];if(key?.toLowerCase()===name.toLowerCase())return clean(tag.match(/content=["']([^"']*)["']/i)?.[1]||"");}return "";};
 export function extractHtmlGuide(html:string,url:string){
  const h1=clean(html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1]||"");
  const title=clean(html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1]||"");
