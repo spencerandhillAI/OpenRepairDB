@@ -25,7 +25,7 @@ export async function POST(req:NextRequest){
  const url=String(input.url||"");
  const result=await safeFetch(url);
  if(result.type.includes("json") || result.body.trimStart().startsWith("{")){
- const data=JSON.parse(result.body);return NextResponse.json({data:normalizeGuide(data)});
+ const data=JSON.parse(result.body);return NextResponse.json({data:data});
  }
  const extracted=extractHtmlGuide(result.body,url);
  return NextResponse.json({data:extracted,notice:"HTML-Auswertung: technische Tabellen und Dokumentationslinks wurden übernommen, soweit im HTML vorhanden. Bitte Modell, Angaben und Quelle prüfen. Leere Felder werden nicht erfunden."});
