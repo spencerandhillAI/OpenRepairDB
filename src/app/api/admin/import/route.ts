@@ -1,4 +1,4 @@
-import {normalizeImport,inspectImport,saveImport,type Kind,type Mode} from "@/lib/admin-entity-import";
+import {normalizeImport,inspectImport,suggestImport,saveImport,type Kind,type Mode} from "@/lib/admin-entity-import";
 import { extractHtmlGuide } from "@/lib/html-guide-extractor";
 import { NextRequest,NextResponse } from "next/server";
 import {adminAuthorized,safeFetch} from "@/lib/admin-import";
@@ -34,12 +34,13 @@ export async function POST(req:NextRequest){
  if(!["device","board","component","repair"].includes(kind))return NextResponse.json({error:"Bitte Importtyp auswählen."},{status:400});
  const record=normalizeImport(kind,input.data);
  const matches=await inspectImport(kind,record);
- if(input.action==="preview")return NextResponse.json({data:record,matches,warning:matches.length>1?"Mehrdeutige Dubletten – Import gesperrt.":matches.length===1?"Vorhandener Datensatz erkannt. Ergänzen möglich.":"Kein vorhandener Datensatz erkannt. Neuanlage möglich."});
+ const suggestions=input.action==="preview"?await suggestImport(kind,record):[];
+ if(input.action==="preview")return NextResponse.json({data:record,matches,suggestions,warning:matches.length>1?"Mehrdeutige Dubletten – Import gesperrt.":matches.length===1?"Vorhandener Datensatz erkannt. Ergänzen möglich.":"Kein vorhandener Datensatz erkannt. Neuanlage möglich."});
  if(input.action==="save"){
   if(input.confirm!==true)return NextResponse.json({error:"Explizite Bestätigung erforderlich."},{status:400});
   const mode=input.mode as Mode;
   if(mode!=="create"&&mode!=="enrich")return NextResponse.json({error:"Bitte Neuanlage oder Ergänzung auswählen."},{status:400});
-  const result=await saveImport(kind,mode,record);
+  const result=await saveImport(kind,mode,record,Number(input.selectedId));
   return NextResponse.json({saved:true,...result});
  }
  return NextResponse.json({error:"Unbekannte Aktion."},{status:400});
