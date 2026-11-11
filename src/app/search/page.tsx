@@ -12,8 +12,23 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
     try {
       const term = q.trim().slice(0, 120);
       const result = await pool.query(
-        "SELECT 'Gerät' AS kind, canonical_model_name AS label, COALESCE(description, '') AS detail FROM devices WHERE review_status = 'approved' AND search_text ILIKE $1 ESCAPE '\\\\' LIMIT 20",
-        [`%${term.replace(/[\\\\%_]/g, "\\\\$&")}%`]
+        `SELECT 'Gerät' AS kind,
+                d.canonical_model_name AS label,
+                concat_ws(' · ', m.name, d.product_category, d.description) AS detail
+         FROM devices d
+         LEFT JOIN manufacturers m ON m.id = d.manufacturer_id
+         WHERE d.review_status = 'approved'
+           AND (
+             position(lower($1) in d.search_text) > 0
+             OR EXISTS (
+               SELECT 1 FROM device_identifiers di
+               WHERE di.device_id = d.id
+                 AND position(lower($1) in lower(di.value_normalized)) > 0
+             )
+           )
+         ORDER BY d.canonical_model_name
+         LIMIT 20`,
+        [term]
       );
       results = result.rows;
       status = results.length ? `${results.length} Treffer` : "Noch keine passenden Einträge. Die Datenbank ist am Anfang noch leer.";
