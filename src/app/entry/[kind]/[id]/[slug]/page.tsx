@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { pool } from "@/lib/db";
 import { entryHref, kindNames, kinds, publicId, type EntryKind } from "@/lib/entries";
+import { getDeviceGuide } from "@/lib/device-guides";
 
 type Props = { params: Promise<{ kind:string; id:string; slug:string }> };
 type Row = Record<string, unknown>;
@@ -24,6 +25,7 @@ export default async function EntryPage({params}:Props) {
   if (!result.rows.length) notFound();
   const r:Row = result.rows[0];
   const title = kind==="device" ? val(r.canonical_model_name) : kind==="board" ? val(r.board_identifier_original) : kind==="component" ? (val(r.part_number_original)||val(r.marking)||"Bauteil") : val(r.title);
+  const guide = kind==="device" ? getDeviceGuide(r.canonical_model_name) : null;
   const canonical = entryHref(kind,id,title);
   if (slug !== canonical.split("/").at(-1)) redirect(canonical);
   const links:{href:string;label:string}[]=[];
@@ -53,6 +55,16 @@ export default async function EntryPage({params}:Props) {
     <h1 className="pageTitle">{title}</h1>
     <p className="status">Kurzname: {slug} · Kennung: {publicId(kind,id)}</p>
     {kind==="device" && <><Detail label="Hersteller" value={r.manufacturer}/><Detail label="Kategorie" value={r.product_category}/><Detail label="Beschreibung" value={r.description}/></>}
+    {kind==="device" && guide && <section className="technicalGuide">
+      <h2>Was ist das?</h2><p>{guide.overview}</p>
+      <h2>Was kann das Gerät?</h2><ul>{guide.capabilities.map(x=><li key={x}>{x}</li>)}</ul>
+      <h2>Technische Daten</h2><dl className="techSpecs">{guide.specifications.map(([name,value])=><div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>
+      <h2>Pinbelegung und Anschlüsse</h2><p>Die folgende Übersicht fasst die wichtigsten Pin-Gruppen zusammen. Maßgeblich ist das vollständige Pinout des Herstellers.</p>
+      {guide.pinGroups.map(group=><section className="pinGroup" key={group.name}><h3>{group.name}</h3><strong>{group.pins}</strong><p>{group.description}</p></section>)}
+      <h2>Hinweise für Prüfung und Reparatur</h2><ul>{guide.safety.map(x=><li key={x}>{x}</li>)}</ul>
+      <h2>Weiterführende Dokumentation</h2><ul>{guide.links.map(x=><li key={x.url}><a href={x.url} target="_blank" rel="noopener noreferrer">{x.label} ↗</a></li>)}</ul>
+      <p className="status">Technische Angaben aus offizieller Arduino-Dokumentation. Pinout und Schaltplan werden verlinkt, nicht als eigene Zeichnungen ausgegeben.</p>
+    </section>}
     {kind==="board" && <><Detail label="Hersteller" value={r.manufacturer}/><Detail label="Platinenkennung" value={r.board_identifier_original}/><Detail label="Typ" value={r.board_type}/><Detail label="Revision" value={r.revision}/><Detail label="Notizen" value={r.notes}/></>}
     {kind==="component" && <><Detail label="Hersteller" value={r.manufacturer}/><Detail label="Teilenummer" value={r.part_number_original}/><Detail label="Markierung" value={r.marking}/><Detail label="Bauteiltyp" value={r.component_type}/><Detail label="Beschreibung" value={r.description}/></>}
     {kind==="repair" && <><Detail label="Fehlerbild / Symptome" value={r.symptoms}/><Detail label="Fehlercode" value={r.fault_code}/><Detail label="Diagnose" value={r.diagnosis}/><Detail label="Reparaturmaßnahmen" value={r.repair_actions}/><Detail label="Verwendete Teile" value={r.parts_used}/><Detail label="Werkzeuge" value={r.tools_used}/><Detail label="Ergebnis" value={r.outcome}/><Detail label="Sicherheitshinweise" value={r.safety_notes}/><Detail label="Verifizierungsstatus" value={r.verification_status}/></>}
