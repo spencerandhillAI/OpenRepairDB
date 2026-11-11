@@ -22,9 +22,9 @@ export default function Home() {
       </section>
 
       <section className="pillars" id="about">
-        <article><div className="number">01</div><h2>Geräte</h2><p>Modelle, Hersteller und eindeutige Produktkennungen an einem Ort.</p></article>
-        <article><div className="number">02</div><h2>Platinen & Bauteile</h2><p>Verbindungen zwischen Baugruppen, Ersatzteilen und baugleichen Geräten.</p></article>
-        <article><div className="number">03</div><h2>Reparaturwissen</h2><p>Fehlerbilder, Messwerte, Reparaturberichte und nachvollziehbare Quellen.</p></article>
+        <Link href="/category/devices" className="pillarLink"><div className="number">01</div><h2>Geräte</h2><p>Modelle, Hersteller und eindeutige Produktkennungen an einem Ort.</p><span>Neueste Geräte ansehen →</span></Link>
+        <Link href="/category/parts" className="pillarLink"><div className="number">02</div><h2>Platinen & Bauteile</h2><p>Verbindungen zwischen Baugruppen, Ersatzteilen und baugleichen Geräten.</p><span>Neueste Einträge ansehen →</span></Link>
+        <Link href="/category/repairs" className="pillarLink"><div className="number">03</div><h2>Reparaturwissen</h2><p>Fehlerbilder, Messwerte, Reparaturberichte und nachvollziehbare Quellen.</p><span>Neueste Reparaturen ansehen →</span></Link>
       </section>
 
       <footer><span>OpenRepairDB</span><span>Offen. Nachvollziehbar. Geräteübergreifend.</span></footer>
