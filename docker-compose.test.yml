@@ -24,6 +24,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      ADMIN_IMPORT_KEY: ${ADMIN_IMPORT_KEY:-}
       DATABASE_URL: postgresql://openrepairdb:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Portainer stack environment}@db:5432/openrepairdb
     depends_on:
       db:
