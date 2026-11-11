@@ -26,6 +26,18 @@ async function find(db:PoolClient,kind:Kind,r:Obj){
  if(kind==="component")return (await db.query(`SELECT c.id,c.part_number_original AS name FROM components c LEFT JOIN manufacturers m ON m.id=c.manufacturer_id WHERE lower(trim(c.part_number_normalized))=$1 AND lower(coalesce(m.name,''))=$2 ORDER BY c.id`,[name,manufacturer])).rows;
  return (await db.query(`SELECT r.id,r.title AS name FROM repair_cases r JOIN sources s ON s.id=r.source_id WHERE lower(trim(r.title))=$1 OR (s.canonical_url=$2 AND s.source_type='admin_import_repair') ORDER BY r.id`,[name,r.sourceUrl])).rows;
 }
+export async function suggestImport(kind:Kind,r:Obj){
+ const name=key(String(r.name)),man=key(String(r.manufacturer||""));
+ const queries:Record<Kind,string>={
+ device:"SELECT d.id,d.canonical_model_name AS name,m.name AS manufacturer,greatest(similarity(lower(d.canonical_model_name),$1),similarity(lower(d.canonical_model_name),$3)) AS score FROM devices d LEFT JOIN manufacturers m ON m.id=d.manufacturer_id WHERE lower(coalesce(m.name,''))=$2 AND (lower(d.canonical_model_name) % $1 OR lower(d.canonical_model_name) % $3) ORDER BY score DESC LIMIT 8",
+ board:"SELECT b.id,b.board_identifier_original AS name,m.name AS manufacturer,similarity(lower(b.board_identifier_original),$1) AS score FROM boards b LEFT JOIN manufacturers m ON m.id=b.manufacturer_id WHERE lower(coalesce(m.name,''))=$2 AND lower(b.board_identifier_original) % $1 ORDER BY score DESC LIMIT 8",
+ component:"SELECT c.id,c.part_number_original AS name,m.name AS manufacturer,similarity(lower(coalesce(c.part_number_original,'')),$1) AS score FROM components c LEFT JOIN manufacturers m ON m.id=c.manufacturer_id WHERE lower(coalesce(m.name,''))=$2 AND lower(coalesce(c.part_number_original,'')) % $1 ORDER BY score DESC LIMIT 8",
+ repair:"SELECT id,title AS name,NULL::text AS manufacturer,similarity(lower(title),$1) AS score FROM repair_cases WHERE lower(title) % $1 ORDER BY score DESC LIMIT 8"
+ };
+ const db=await pool.connect();
+ try{return (await db.query(queries[kind],[name,man,man+" "+name])).rows.filter(x=>Number(x.score)>=0.3);}
+ finally{db.release();}
+}
 export async function inspectImport(kind:Kind,r:Obj){
  const db=await pool.connect();try{return await find(db,kind,r);}finally{db.release();}
 }
@@ -33,15 +45,21 @@ async function manufacturerId(db:PoolClient,name:string){
  const found=await db.query(`INSERT INTO manufacturers(name) VALUES($1) ON CONFLICT(name) DO UPDATE SET name=EXCLUDED.name RETURNING id`,[name]);
  return found.rows[0].id;
 }
-export async function saveImport(kind:Kind,mode:Mode,r:Obj){
+export async function saveImport(kind:Kind,mode:Mode,r:Obj,selectedId?:number){
  const db=await pool.connect();
  try{
  await db.query("BEGIN");
  await db.query("SELECT pg_advisory_xact_lock(hashtext($1))",["admin-import:"+kind+":"+key(String(r.manufacturer||""))+":"+key(String(r.name))]);
  const matches=await find(db,kind,r);
  if(matches.length>1)throw Error("Mehrere Dubletten gefunden. Bitte manuell klären.");
+ if(mode==="enrich"){
+  if(!Number.isSafeInteger(selectedId)||!selectedId||selectedId<=0)throw Error("Bitte einen vorhandenen Datensatz auswählen.");
+  const table={device:"devices",board:"boards",component:"components",repair:"repair_cases"}[kind];
+  const exists=await db.query("SELECT id FROM "+table+" WHERE id=$1 FOR UPDATE",[selectedId]);
+  if(!exists.rowCount)throw Error("Ausgewählter Datensatz existiert nicht.");
+  if(matches.length===1&&Number(matches[0].id)!==selectedId)throw Error("Exakter Dublettentreffer weicht von der Auswahl ab.");
+ }
  if(mode==="create"&&matches.length)throw Error("Datensatz existiert bereits. Bitte 'Vorhandenen Datensatz ergänzen' verwenden.");
- if(mode==="enrich"&&!matches.length)throw Error("Kein vorhandener Datensatz. Bitte 'Neuen Datensatz anlegen' verwenden.");
  const source=await db.query(`INSERT INTO sources(source_type,source_name,canonical_url,permitted_use,retrieved_at,notes)
  VALUES($1,$2,$3,'metadata_only',NOW(),$4) RETURNING id`,["admin_import_"+kind,String(r.name),r.sourceUrl,"Administrator-Import; Quelleninhalt und Nutzungsrechte manuell prüfen"]);
  const sourceId=source.rows[0].id;
@@ -51,7 +69,7 @@ export async function saveImport(kind:Kind,mode:Mode,r:Obj){
  let id:number;
  if(kind==="device"){
   if(mode==="create"){const q=await db.query(`INSERT INTO devices(manufacturer_id,canonical_model_name,product_category,description,review_status) VALUES($1,$2,$3,$4,'pending') RETURNING id`,[mid,name,str(r.category,200)||null,description||null]);id=q.rows[0].id;}
-  else {id=matches[0].id;await db.query(`UPDATE devices SET description=CASE WHEN $2<>'' AND (description IS NULL OR description='') THEN $2 ELSE description END, product_category=COALESCE(product_category,NULLIF($3,'')),updated_at=NOW() WHERE id=$1`,[id,description,str(r.category,200)]);}
+  else {id=selectedId!;await db.query(`UPDATE devices SET description=CASE WHEN $2<>'' AND (description IS NULL OR description='') THEN $2 ELSE description END, product_category=COALESCE(product_category,NULLIF($3,'')),updated_at=NOW() WHERE id=$1`,[id,description,str(r.category,200)]);}
   const doc=await db.query("SELECT * FROM device_documentation WHERE device_id=$1 FOR UPDATE",[id]);
   const x=doc.rows[0];
   const array=(v:unknown)=>Array.isArray(v)?v:[];
@@ -65,13 +83,13 @@ export async function saveImport(kind:Kind,mode:Mode,r:Obj){
   review_status='pending',updated_at=NOW()`,[id,x?.overview||description||name,JSON.stringify(fields.capabilities),JSON.stringify(fields.specifications),JSON.stringify(fields.pins),JSON.stringify(fields.safety),JSON.stringify(fields.links),r.sourceUrl]);
  }else if(kind==="board"){
   if(mode==="create"){const q=await db.query(`INSERT INTO boards(manufacturer_id,board_identifier_original,board_identifier_normalized,board_type,revision,notes,review_status) VALUES($1,$2,$3,$4,$5,$6,'pending') RETURNING id`,[mid,name,key(name),str(r.category,200)||null,str(r.revision,100)||null,description||null]);id=q.rows[0].id;}
-  else{id=matches[0].id;await db.query(`UPDATE boards SET notes=COALESCE(NULLIF(notes,''),NULLIF($2,'')),board_type=COALESCE(board_type,NULLIF($3,'')) WHERE id=$1`,[id,description,str(r.category,200)]);}
+  else{id=selectedId!;await db.query(`UPDATE boards SET notes=COALESCE(NULLIF(notes,''),NULLIF($2,'')),board_type=COALESCE(board_type,NULLIF($3,'')) WHERE id=$1`,[id,description,str(r.category,200)]);}
  }else if(kind==="component"){
   if(mode==="create"){const q=await db.query(`INSERT INTO components(manufacturer_id,part_number_original,part_number_normalized,component_type,description,review_status) VALUES($1,$2,$3,$4,$5,'pending') RETURNING id`,[mid,name,key(name),str(r.category,200)||null,description||null]);id=q.rows[0].id;}
-  else{id=matches[0].id;await db.query(`UPDATE components SET description=COALESCE(NULLIF(description,''),NULLIF($2,'')),component_type=COALESCE(component_type,NULLIF($3,'')) WHERE id=$1`,[id,description,str(r.category,200)]);}
+  else{id=selectedId!;await db.query(`UPDATE components SET description=COALESCE(NULLIF(description,''),NULLIF($2,'')),component_type=COALESCE(component_type,NULLIF($3,'')) WHERE id=$1`,[id,description,str(r.category,200)]);}
  }else{
   if(mode==="create"){const q=await db.query(`INSERT INTO repair_cases(source_id,title,symptoms,diagnosis,repair_actions,safety_notes,review_status,verification_status) VALUES($1,$2,$3,$4,$5,$6,'pending','unverified') RETURNING id`,[sourceId,name,str(r.symptoms)||description||null,str(r.diagnosis)||null,str(r.repairActions)||null,str(r.safetyNotes)||null]);id=q.rows[0].id;}
-  else{id=matches[0].id;await db.query(`UPDATE repair_cases SET symptoms=COALESCE(NULLIF(symptoms,''),NULLIF($2,'')),diagnosis=COALESCE(NULLIF(diagnosis,''),NULLIF($3,'')),repair_actions=COALESCE(NULLIF(repair_actions,''),NULLIF($4,'')),updated_at=NOW() WHERE id=$1`,[id,str(r.symptoms)||description,str(r.diagnosis),str(r.repairActions)]);}
+  else{id=selectedId!;await db.query(`UPDATE repair_cases SET symptoms=COALESCE(NULLIF(symptoms,''),NULLIF($2,'')),diagnosis=COALESCE(NULLIF(diagnosis,''),NULLIF($3,'')),repair_actions=COALESCE(NULLIF(repair_actions,''),NULLIF($4,'')),updated_at=NOW() WHERE id=$1`,[id,str(r.symptoms)||description,str(r.diagnosis),str(r.repairActions)]);}
  }
  await db.query(`INSERT INTO imported_entity_documents(entity_kind,entity_id,source_id,payload,review_status) VALUES($1,$2,$3,$4::jsonb,'pending')`,[kind,id,sourceId,JSON.stringify(r)]);
  await db.query("COMMIT");return {id,kind,mode,reviewStatus:"pending"};
