@@ -73,6 +73,7 @@ export async function saveImport(kind:Kind,mode:Mode,r:Obj){
   if(mode==="create"){const q=await db.query(`INSERT INTO repair_cases(source_id,title,symptoms,diagnosis,repair_actions,safety_notes,review_status,verification_status) VALUES($1,$2,$3,$4,$5,$6,'pending','unverified') RETURNING id`,[sourceId,name,str(r.symptoms)||description||null,str(r.diagnosis)||null,str(r.repairActions)||null,str(r.safetyNotes)||null]);id=q.rows[0].id;}
   else{id=matches[0].id;await db.query(`UPDATE repair_cases SET symptoms=COALESCE(NULLIF(symptoms,''),NULLIF($2,'')),diagnosis=COALESCE(NULLIF(diagnosis,''),NULLIF($3,'')),repair_actions=COALESCE(NULLIF(repair_actions,''),NULLIF($4,'')),updated_at=NOW() WHERE id=$1`,[id,str(r.symptoms)||description,str(r.diagnosis),str(r.repairActions)]);}
  }
+ await db.query(`INSERT INTO imported_entity_documents(entity_kind,entity_id,source_id,payload,review_status) VALUES($1,$2,$3,$4::jsonb,'pending')`,[kind,id,sourceId,JSON.stringify(r)]);
  await db.query("COMMIT");return {id,kind,mode,reviewStatus:"pending"};
  }catch(e){await db.query("ROLLBACK");throw e;}finally{db.release();}
 }
