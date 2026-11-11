@@ -8,7 +8,8 @@
 - Improve HTML/PDF extraction and distinguish related product navigation from true source documentation.
 
 ## Next
-- Proper user accounts, admin roles, moderation and publish/reject workflow.
+- Implement protected admin dashboard, user accounts, session authentication, password reset, role/permission management and server-side authorization per `docs/ADMINISTRATION_AND_ROLES.md`.
+- Migrate importer from shared `ADMIN_IMPORT_KEY` to role-based admin authorization; add moderation and publish/reject workflow.
 - Better import validation, provenance, licensing review, transaction-safe updates and duplicate prevention.
 - Richer documentation for devices, boards, components and repair cases.
 - Media uploads, permissions and moderation per `docs/MEDIA_AND_PERMISSIONS.md`.
