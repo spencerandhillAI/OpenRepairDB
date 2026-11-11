@@ -32,3 +32,9 @@ User prefers concise German, concrete Portainer/Unraid GUI instructions. Assista
 ## Administration requirements added
 - The administrator feature set is now specified in `docs/ADMINISTRATION_AND_ROLES.md`: importer, user management, password reset, rights/roles, moderation and audit.
 - **Requirements only:** user/password/role administration is not implemented. Current `ADMIN_IMPORT_KEY` is importer-only temporary access control.
+
+## Manufacturer autocomplete (committed, not runtime-verified)
+- Admin import now has a free-text manufacturer input for devices, boards and components; repair cases have none.
+- Native browser datalist combines category-specific starter manufacturers with names from the existing `manufacturers` table, retrieved via authenticated `manufacturers` API action.
+- The selected/typed manufacturer is passed separately to preview/save and overrides JSON manufacturer. New names remain permitted and are inserted during save.
+- Test after GitHub Actions build and Portainer redeploy. No migration required for this feature.
