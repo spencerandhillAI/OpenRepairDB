@@ -1,5 +1,11 @@
 # OpenRepairDB
 
+> **AI-GENERATED PROJECT — KI-GENERIERTES PROJEKT**
+>
+> **Deutsch:** Die bisherige Anwendung, einschließlich Quellcode, Architektur und Projektdokumentation, wurde mit **ChatGPT (GPT-6) von OpenAI** KI-generiert. Die Projektleitung und Entscheidungen liegen beim menschlichen Repository-Betreiber. KI-generierter Code ist nicht automatisch geprüft, sicher oder fehlerfrei. Zukünftige Beiträge anderer Personen werden nicht pauschal als KI-generiert bezeichnet.
+>
+> **English:** The application to date, including source code, architecture, and project documentation, has been **AI-generated using OpenAI's ChatGPT (GPT-6)**. Project direction and decisions remain with the human repository owner. AI-generated code is not inherently tested, secure, or free of defects. Future human contributions are not automatically described as AI-generated.
+
 **An open, community-driven technical knowledge base for repairing devices.**
 
 OpenRepairDB connects repair knowledge across device models, manufacturers, circuit boards and components. Search should work not only by model number, but also by PCB identifier, component marking, fault code or symptom.
