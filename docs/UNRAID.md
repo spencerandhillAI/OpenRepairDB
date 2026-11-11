@@ -2,21 +2,31 @@
 
 Target: Unraid 7.3.4.
 
-## Planned services
+## Services
 
 - `openrepairdb-web`: Next.js application, host port 3000 during initial testing.
 - `openrepairdb-db`: PostgreSQL 17, internal Docker network only.
-- Named Docker volume for PostgreSQL data during the first local test.
+- Named Docker volume for PostgreSQL data.
+- The SQL in `db/init` is automatically applied when PostgreSQL creates a new, empty data volume.
 
-## Before production
+## Initial test deployment
 
-1. Create a dedicated appdata directory and decide the backup destination.
-2. Copy `.env.example` to `.env` and set a long random database password.
-3. Set `DATABASE_URL` to use the same password as `POSTGRES_PASSWORD`.
-4. Build and start with Docker Compose.
-5. Confirm the web interface and database health.
-6. Move persistent database data to the intended Unraid appdata path if required by the final deployment policy.
-7. Configure HTTPS and reverse proxy; do not publish the database port.
-8. Configure and test database plus media backups.
+1. Clone this repository to a persistent Unraid appdata location.
+2. Copy `.env.example` to `.env`.
+3. Generate a long random password and set `POSTGRES_PASSWORD`.
+4. Set `DATABASE_URL` with exactly the same password, using hostname `db` and database `openrepairdb`.
+5. Run `docker compose up -d --build` from the repository directory.
+6. Open `http://UNRAID-IP:3000` on the local network.
+7. Check container logs and verify that both services are healthy.
 
-The current compose file is a development foundation, not yet a hardened public production deployment. The database schema is provided separately and will be wired into automated migrations before the first functional data-entry release.
+Example URL format (replace the password; do not use this literal value):
+`postgresql://openrepairdb:YOUR_PASSWORD@db:5432/openrepairdb`
+
+## Important
+
+- Do not expose PostgreSQL port 5432 to the host or internet.
+- Do not commit `.env`; it is excluded by `.gitignore`.
+- PostgreSQL initialization scripts run only when the data directory is empty. Future schema changes must use versioned migrations, not edits to the already executed initial script.
+- Back up the database and uploaded media separately, and test restores.
+- Configure HTTPS and a reverse proxy before any public launch.
+- This is an initial test deployment, not yet a hardened public production deployment.
