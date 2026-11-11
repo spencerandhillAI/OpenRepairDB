@@ -20,6 +20,7 @@ export default function AdminImportPage(){
  const [manufacturer,setManufacturer]=useState("");
  const [knownManufacturers,setKnownManufacturers]=useState<string[]>([]);
  const [manufacturerNotice,setManufacturerNotice]=useState("");
+ const [manufacturerOpen,setManufacturerOpen]=useState(false);
  const [url,setUrl]=useState("");
  const [result,setResult]=useState<Reply|null>(null);
  const [busy,setBusy]=useState(false);
@@ -52,6 +53,7 @@ export default function AdminImportPage(){
  }
  const matches=result?.matches||[];
  const manufacturerOptions=kind==="repair"?[]:Array.from(new Map([...starterManufacturers[kind],...knownManufacturers].map(x=>[x.trim().toLocaleLowerCase("de"),x.trim()])).values()).sort((a,b)=>a.localeCompare(b,"de"));
+ const filteredManufacturers=manufacturerOptions.filter(x=>x.toLocaleLowerCase("de").includes(manufacturer.trim().toLocaleLowerCase("de"))).slice(0,12);
  const eligible=previewed&&(mode==="create"?matches.length===0:mode==="enrich"&&!!selectedId);
  return <main className="shell page">
   <header className="topbar"><a className="brand" href="/">OpenRepair<span>DB</span></a><a href="/">← Startseite</a></header>
@@ -59,16 +61,26 @@ export default function AdminImportPage(){
   <p className="status">Administrator-Importschlüssel erforderlich. Neue und ergänzte Datensätze werden zur Prüfung vorgemerkt. Vorhandene Werte werden bei Ergänzungen nicht überschrieben.</p>
   <div className="importForm">
    <label>Was möchtest du importieren?
-    <select value={kind} onChange={e=>{setKind(e.target.value as Kind);setManufacturer("");reset();}}>
+    <select value={kind} onChange={e=>{setKind(e.target.value as Kind);setManufacturer("");setManufacturerOpen(false);reset();}}>
      {Object.entries(labels).map(([value,label])=><option key={value} value={value}>{label}</option>)}
     </select>
    </label>
    <label>Administrator-Importschlüssel<input type="password" autoComplete="off" value={password} onChange={e=>setPassword(e.target.value)}/></label>
-   {kind!=="repair"&&<label>Hersteller
-    <input type="text" list="import-manufacturer-options" autoComplete="off" placeholder="Hersteller eingeben oder auswählen, z. B. Arduino" value={manufacturer} onFocus={()=>{if(knownManufacturers.length===0)void loadManufacturers();}} onChange={e=>{setManufacturer(e.target.value);reset();}}/>
-    <datalist id="import-manufacturer-options">{manufacturerOptions.map(x=><option key={x} value={x}/>)}</datalist>
-    <span>Vorschläge aus der Datenbank und einer Startliste. Neue Hersteller können frei eingegeben werden.</span>
-   </label>}
+   {kind!=="repair"&&<div style={{position:"relative"}}>
+    <label htmlFor="manufacturer-input">Hersteller</label>
+    <input id="manufacturer-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded={manufacturerOpen} aria-controls="manufacturer-suggestions" autoComplete="off" placeholder="Hersteller eingeben, z. B. Arduino" value={manufacturer}
+     onFocus={()=>{setManufacturerOpen(true);if(knownManufacturers.length===0)void loadManufacturers();}}
+     onBlur={e=>{if(!e.currentTarget.parentElement?.contains(e.relatedTarget as Node))setManufacturerOpen(false);}}
+     onKeyDown={e=>{if(e.key==="Escape")setManufacturerOpen(false);if(e.key==="Enter"&&manufacturerOpen&&filteredManufacturers.length){e.preventDefault();setManufacturer(filteredManufacturers[0]);setManufacturerOpen(false);reset();}}}
+     onChange={e=>{setManufacturer(e.target.value);setManufacturerOpen(true);reset();}}/>
+    {manufacturerOpen&&filteredManufacturers.length>0&&<div id="manufacturer-suggestions" role="listbox" aria-label="Herstellervorschläge" style={{position:"relative",zIndex:10,maxHeight:260,overflowY:"auto",background:"#17251e",border:"1px solid #66806e",borderRadius:10,marginTop:4,boxShadow:"0 8px 24px #0008"}}>
+      {filteredManufacturers.map(x=><button key={x} type="button" role="option" aria-selected={manufacturer===x}
+       onMouseDown={e=>e.preventDefault()}
+       onClick={()=>{setManufacturer(x);setManufacturerOpen(false);reset();}}
+       style={{display:"block",width:"100%",textAlign:"left",padding:"12px 16px",background:"transparent",color:"#f1f6f1",border:0,borderBottom:"1px solid #34483d",borderRadius:0,fontSize:"1rem",cursor:"pointer"}}>{x}</button>)}
+     </div>}
+    <p style={{fontSize:".9rem",opacity:.8,marginTop:6}}>Vorschläge aus Datenbank und Startliste. Freitext ist ebenfalls möglich.</p>
+   </div>}
    {manufacturerNotice&&<p role="status">{manufacturerNotice}</p>}
    <label>HTTPS-Quelladresse (freigegebene Domains)<input type="url" placeholder="https://docs.arduino.cc/..." value={url} onChange={e=>{setUrl(e.target.value);reset();}}/></label>
    <button disabled={busy||!password||!url} onClick={()=>call("fetch")}>URL auslesen</button>
