@@ -104,8 +104,8 @@ export default function AdminImportPage(){
     <label className="importConfirm"><input type="checkbox" checked={mode==="create"} disabled={matches.length!==0} onChange={e=>{setMode(e.target.checked?"create":null);setApproved(false);}}/> Neuen Datensatz anlegen</label>
    </section>}
    {result?.notice&&<p>{result.notice}</p>}
-   {result?.error&&<p role="alert">{result.error}</p>}
-   {result?.saved&&<p role="status">Gespeichert: {prefixes[result.kind||kind]}-{String(result.id).padStart(6,"0")} ({result.mode==="create"?"neu angelegt":"ergänzt"}). Prüfstatus: pending.</p>}
+   {result?.error&&<div role="alert" aria-live="assertive" style={{background:"#4b171d",color:"#fff1f2",border:"2px solid #ef4444",borderRadius:12,padding:"18px 20px",margin:"18px 0",fontWeight:600}}><strong style={{display:"block",fontSize:"1.15rem",marginBottom:8}}>✕ Import fehlgeschlagen</strong><span style={{overflowWrap:"anywhere"}}>{result.error}</span></div>}
+   {result?.saved&&<div role="status" aria-live="polite" style={{background:"#123d2a",color:"#e9fff0",border:"2px solid #4ade80",borderRadius:12,padding:"18px 20px",margin:"18px 0"}}><strong style={{display:"block",fontSize:"1.15rem",marginBottom:8}}>✓ Import erfolgreich!</strong><div>Datensatz <strong>{prefixes[result.kind||kind]}-{String(result.id).padStart(6,"0")}</strong> wurde {result.mode==="create"?"neu angelegt":"ergänzt"}.</div><div style={{marginTop:6}}>Prüfstatus: <strong>Ausstehend (pending)</strong></div></div>}
    <label className="importConfirm"><input type="checkbox" checked={approved} disabled={!eligible} onChange={e=>setApproved(e.target.checked)}/> Ich habe die Quelle, technischen Angaben und Dublettenprüfung kontrolliert. Import bestätigen.</label>
    <button disabled={busy||!password||!json||!eligible||!approved} onClick={()=>call("save")}>{mode==="enrich"?"Vorhandenen Datensatz ergänzen":"Neuen Datensatz anlegen"}</button>
   </div>
