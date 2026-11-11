@@ -38,3 +38,7 @@ User prefers concise German, concrete Portainer/Unraid GUI instructions. Assista
 - Native browser datalist combines category-specific starter manufacturers with names from the existing `manufacturers` table, retrieved via authenticated `manufacturers` API action.
 - The selected/typed manufacturer is passed separately to preview/save and overrides JSON manufacturer. New names remain permitted and are inserted during save.
 - Test after GitHub Actions build and Portainer redeploy. No migration required for this feature.
+
+## Manufacturer autocomplete mobile fix
+- User reported browser-native datalist did not display suggestions on Android/Vivaldi after typing `Ard`.
+- Replaced datalist with an explicit, visible, filtered list of clickable manufacturer suggestions, including keyboard Enter/Escape handling. Commit a1de7855; runtime validation pending.
