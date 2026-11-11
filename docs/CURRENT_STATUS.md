@@ -28,3 +28,7 @@ Check GitHub Actions build, ensure `pg_trgm` exists, test the importer's fuzzy s
 
 ## Working style
 User prefers concise German, concrete Portainer/Unraid GUI instructions. Assistant commits to GitHub; user redeploys and shares screenshots. Do not ask for administrator secret.
+
+## Administration requirements added
+- The administrator feature set is now specified in `docs/ADMINISTRATION_AND_ROLES.md`: importer, user management, password reset, rights/roles, moderation and audit.
+- **Requirements only:** user/password/role administration is not implemented. Current `ADMIN_IMPORT_KEY` is importer-only temporary access control.
