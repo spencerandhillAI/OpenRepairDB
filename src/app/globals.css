@@ -45,3 +45,11 @@ footer{border-top:1px solid #ffffff18;padding:25px 0 32px;display:flex;justify-c
 .techSpecs dt{color:var(--muted)}.techSpecs dd{margin:0;font-weight:600}
 .pinGroup{padding:18px 20px;margin:12px 0;background:var(--panel);border:1px solid var(--line);border-radius:12px}
 .pinGroup strong{color:var(--accent)}.pinGroup p{margin:8px 0 0}
+
+.importForm{display:flex;flex-direction:column;gap:18px;max-width:850px}
+.importForm label{display:flex;flex-direction:column;gap:8px;font-weight:600}
+.importForm input:not([type=checkbox]),.importForm textarea{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:14px;font:inherit}
+.importForm button{align-self:flex-start;border:0;border-radius:8px;background:var(--accent);color:#101714;padding:13px 20px;font-weight:700;cursor:pointer}
+.importForm button:disabled{opacity:.45;cursor:not-allowed}
+.importForm .importConfirm{flex-direction:row;align-items:flex-start;font-weight:400}
+.importConfirm input{margin-top:6px}
