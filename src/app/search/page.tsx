@@ -14,56 +14,69 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
     try {
       const term = q.trim().slice(0, 120);
       const result = await pool.query(
-        `SELECT kind, id, label, detail
-         FROM (
-           SELECT 'device' AS kind, d.id::text AS id,
-                  d.canonical_model_name AS label,
-                  concat_ws(' · ', m.name, d.product_category, d.description) AS detail
-           FROM devices d
-           LEFT JOIN manufacturers m ON m.id = d.manufacturer_id
-           WHERE d.review_status = 'approved'
-             AND (
-               position(lower($1) in d.search_text) > 0
-               OR EXISTS (
-                 SELECT 1 FROM device_identifiers di
-                 WHERE di.device_id = d.id
-                   AND position(lower($1) in lower(di.value_normalized)) > 0
-               )
-             )
+        `WITH matches AS (
+           SELECT 'device'::text AS kind, d.id::text AS id, d.canonical_model_name AS label,
+             concat_ws(' · ', m.name, d.product_category, d.description) AS detail,
+             greatest(
+               CASE WHEN lower(d.canonical_model_name)=lower($1) THEN 120 ELSE 0 END,
+               CASE WHEN lower(d.canonical_model_name) LIKE '%' || lower($1) || '%' THEN 65 ELSE 0 END,
+               CASE WHEN lower(coalesce(d.product_category,'')) LIKE '%' || lower($1) || '%' THEN 18 ELSE 0 END,
+               CASE WHEN lower(coalesce(d.description,'')) LIKE '%' || lower($1) || '%' THEN 8 ELSE 0 END,
+               coalesce((SELECT max(CASE
+                 WHEN lower(di.value_normalized)=lower($1) THEN 150
+                 WHEN lower(di.value_normalized) LIKE '%' || lower($1) || '%' THEN 95
+                 ELSE 0 END)
+                 FROM device_identifiers di WHERE di.device_id=d.id),0)
+             ) AS relevance
+           FROM devices d LEFT JOIN manufacturers m ON m.id=d.manufacturer_id
+           WHERE d.review_status='approved'
            UNION ALL
            SELECT 'board', b.id::text, b.board_identifier_original,
-                  concat_ws(' · ', b.board_type, b.revision, b.notes)
-           FROM boards b
-           WHERE b.review_status = 'approved'
-             AND position(lower($1) in lower(b.board_identifier_normalized)) > 0
-           UNION ALL
-           SELECT 'component', c.id::text, coalesce(c.part_number_original, c.marking, 'Bauteil'),
-                  concat_ws(' · ', c.marking, c.component_type, c.description)
-           FROM components c
-           WHERE c.review_status = 'approved'
-             AND (
-               position(lower($1) in lower(coalesce(c.part_number_normalized, ''))) > 0
-               OR position(lower($1) in lower(coalesce(c.marking, ''))) > 0
+             concat_ws(' · ', b.board_type, b.revision, b.notes),
+             greatest(
+               CASE WHEN lower(b.board_identifier_normalized)=lower($1) THEN 150 ELSE 0 END,
+               CASE WHEN lower(b.board_identifier_normalized) LIKE '%' || lower($1) || '%' THEN 95 ELSE 0 END,
+               CASE WHEN lower(coalesce(b.board_type,'')) LIKE '%' || lower($1) || '%' THEN 20 ELSE 0 END,
+               CASE WHEN lower(coalesce(b.revision,'')) LIKE '%' || lower($1) || '%' THEN 15 ELSE 0 END,
+               CASE WHEN lower(coalesce(b.notes,'')) LIKE '%' || lower($1) || '%' THEN 8 ELSE 0 END
              )
+           FROM boards b WHERE b.review_status='approved'
+           UNION ALL
+           SELECT 'component', c.id::text, coalesce(c.part_number_original,c.marking,'Bauteil'),
+             concat_ws(' · ', c.marking,c.component_type,c.description),
+             greatest(
+               CASE WHEN lower(coalesce(c.part_number_normalized,''))=lower($1) THEN 150 ELSE 0 END,
+               CASE WHEN lower(coalesce(c.part_number_normalized,'')) LIKE '%' || lower($1) || '%' THEN 95 ELSE 0 END,
+               CASE WHEN lower(coalesce(c.marking,''))=lower($1) THEN 110 ELSE 0 END,
+               CASE WHEN lower(coalesce(c.marking,'')) LIKE '%' || lower($1) || '%' THEN 70 ELSE 0 END,
+               CASE WHEN lower(coalesce(c.component_type,'')) LIKE '%' || lower($1) || '%' THEN 18 ELSE 0 END,
+               CASE WHEN lower(coalesce(c.description,'')) LIKE '%' || lower($1) || '%' THEN 8 ELSE 0 END
+             )
+           FROM components c WHERE c.review_status='approved'
            UNION ALL
            SELECT 'repair', rc.id::text, rc.title,
-                  concat_ws(' · ', rc.fault_code, rc.symptoms, rc.diagnosis)
-           FROM repair_cases rc
-           WHERE rc.review_status = 'approved'
-             AND (
-               position(lower($1) in lower(coalesce(rc.fault_code, ''))) > 0
-               OR position(lower($1) in lower(coalesce(rc.symptoms, ''))) > 0
-               OR position(lower($1) in lower(rc.title)) > 0
+             concat_ws(' · ', rc.fault_code,rc.symptoms,rc.diagnosis),
+             greatest(
+               CASE WHEN lower(coalesce(rc.fault_code,''))=lower($1) THEN 130 ELSE 0 END,
+               CASE WHEN lower(coalesce(rc.fault_code,'')) LIKE '%' || lower($1) || '%' THEN 85 ELSE 0 END,
+               CASE WHEN lower(rc.title)=lower($1) THEN 110 ELSE 0 END,
+               CASE WHEN lower(rc.title) LIKE '%' || lower($1) || '%' THEN 55 ELSE 0 END,
+               CASE WHEN lower(coalesce(rc.symptoms,'')) LIKE '%' || lower($1) || '%' THEN 25 ELSE 0 END,
+               CASE WHEN lower(coalesce(rc.diagnosis,'')) LIKE '%' || lower($1) || '%' THEN 12 ELSE 0 END
              )
-         ) AS matches
-         ORDER BY CASE WHEN lower(label) = lower($1) THEN 0 ELSE 1 END, label
+           FROM repair_cases rc WHERE rc.review_status='approved'
+         )
+         SELECT kind,id,label,detail
+         FROM matches
+         WHERE relevance>0
+         ORDER BY relevance DESC, lower(label), kind, id
          LIMIT 30`,
         [term]
       );
       results = result.rows;
       status = results.length ? `${results.length} Treffer` : "Noch keine passenden Einträge. Die Datenbank ist am Anfang noch leer.";
     } catch {
-      status = "Die Datenbank ist noch nicht initialisiert. Bitte später erneut versuchen.";
+      status = "Die Suche ist momentan nicht verfügbar. Bitte später erneut versuchen.";
     }
   }
 
