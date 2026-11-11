@@ -9,3 +9,5 @@
 - **Duplicates:** exact matches block accidental creation; fuzzy matches are suggestions requiring explicit user selection. Different hardware revisions must not be silently merged.
 - **Enrichment:** existing populated fields are not silently overwritten; admin confirms create vs enrich.
 - **Source parsing:** generic HTML scraping may extract descriptions, tables and documentation links, but must not claim completeness or invent pinouts.
+
+- **Administrator scope:** includes importer, user lifecycle, secure password-reset initiation, role/permission administration, moderation, provenance and audit operations. See `docs/ADMINISTRATION_AND_ROLES.md`. Administrators must never view plaintext passwords.
