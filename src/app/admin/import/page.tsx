@@ -3,33 +3,34 @@ import {useState} from "react";
 type Kind="device"|"board"|"component"|"repair";
 type Mode="create"|"enrich";
 type Match={id:string;name:string};
-type Reply={error?:string;data?:unknown;matches?:Match[];warning?:string;notice?:string;saved?:boolean;id?:string;kind?:Kind;mode?:Mode};
+type Reply={error?:string;data?:unknown;matches?:Match[];suggestions?:{id:string;name:string;manufacturer?:string;score:number}[];warning?:string;notice?:string;saved?:boolean;id?:string;kind?:Kind;mode?:Mode};
 const labels:Record<Kind,string>={device:"Gerät",board:"Platine",component:"Bauteil",repair:"Reparaturanleitung / Reparaturfall"};
 const prefixes:Record<Kind,string>={device:"DEV",board:"BRD",component:"CMP",repair:"REP"};
 export default function AdminImportPage(){
  const [password,setPassword]=useState("");
  const [kind,setKind]=useState<Kind>("device");
  const [mode,setMode]=useState<Mode|null>(null);
+ const [selectedId,setSelectedId]=useState<string>("");
  const [json,setJson]=useState("");
  const [url,setUrl]=useState("");
  const [result,setResult]=useState<Reply|null>(null);
  const [busy,setBusy]=useState(false);
  const [approved,setApproved]=useState(false);
  const [previewed,setPreviewed]=useState(false);
- const reset=()=>{setResult(null);setMode(null);setApproved(false);setPreviewed(false);};
+ const reset=()=>{setResult(null);setMode(null);setSelectedId("");setApproved(false);setPreviewed(false);};
  async function call(action:"fetch"|"preview"|"save"){
   setBusy(true);
   try{
    const data=action==="fetch"?undefined:JSON.parse(json);
-   const response=await fetch("/api/admin/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password,action,kind,mode,url,data,confirm:action==="save"&&approved})});
+   const response=await fetch("/api/admin/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password,action,kind,mode,selectedId,url,data,confirm:action==="save"&&approved})});
    const reply:Reply=await response.json();setResult(reply);
-   if(action==="fetch"){if(reply.data)setJson(JSON.stringify(reply.data,null,2));setMode(null);setPreviewed(false);setApproved(false);}
-   if(action==="preview"){setPreviewed(!!reply.matches);setMode(null);setApproved(false);}
+   if(action==="fetch"){if(reply.data)setJson(JSON.stringify(reply.data,null,2));setMode(null);setSelectedId("");setPreviewed(false);setApproved(false);}
+   if(action==="preview"){setPreviewed(!!reply.matches);setSelectedId(reply.matches?.length===1?String(reply.matches[0].id):"");setMode(null);setApproved(false);}
    if(action==="save"){setPreviewed(false);setApproved(false);}
   }catch(e){setResult({error:e instanceof Error?e.message:"Fehler"});setPreviewed(false);}finally{setBusy(false);}
  }
  const matches=result?.matches||[];
- const eligible=previewed&&(mode==="create"?matches.length===0:mode==="enrich"&&matches.length===1);
+ const eligible=previewed&&(mode==="create"?matches.length===0:mode==="enrich"&&!!selectedId);
  return <main className="shell page">
   <header className="topbar"><a className="brand" href="/">OpenRepair<span>DB</span></a><a href="/">← Startseite</a></header>
   <p className="eyebrow">ADMINISTRATION · DATENIMPORT</p><h1 className="pageTitle">Datensätze importieren</h1>
@@ -49,7 +50,17 @@ export default function AdminImportPage(){
    {previewed&&<section><h2>Dublettenprüfung: {labels[kind]}</h2>
     {matches.length===0?<p>Kein passender Datensatz gefunden.</p>:matches.map(x=><p key={x.id}>{prefixes[kind]}-{String(x.id).padStart(6,"0")} · {x.name}</p>)}
     {result?.warning&&<p role="status">{result.warning}</p>}
-    <label className="importConfirm"><input type="checkbox" checked={mode==="enrich"} disabled={matches.length!==1} onChange={e=>{setMode(e.target.checked?"enrich":null);setApproved(false);}}/> Vorhandenen Datensatz ergänzen</label>
+    <h3>Meintest du vielleicht dieses Gerät bzw. diesen Eintrag?</h3>
+    <p>Ähnliche Einträge sind Vorschläge, keine bestätigten Dubletten. Bitte Modell und Hardware-Revision vergleichen.</p>
+    <div role="radiogroup" aria-label="Vorhandenen Datensatz auswählen">
+    {Array.from(new Map([...matches.map(x=>({...x,score:1})),...(result?.suggestions||[])].map(x=>[String(x.id),x])).values()).map(x=>
+      <label className="importConfirm" key={x.id}>
+       <input type="radio" name="existingEntry" checked={selectedId===String(x.id)} onChange={()=>{setSelectedId(String(x.id));setMode("enrich");setApproved(false);}}/>
+       {prefixes[kind]}-{String(x.id).padStart(6,"0")} · {x.name} {x.score<1?"(ähnlicher Treffer)": "(exakter Treffer)"}
+      </label>)}
+    <label className="importConfirm"><input type="radio" name="existingEntry" checked={mode==="create"} onChange={()=>{setSelectedId("");setMode("create");setApproved(false);}}/> Keines davon – neuen Datensatz anlegen</label>
+    </div>
+    <label className="importConfirm"><input type="checkbox" checked={mode==="enrich"} disabled={!selectedId} onChange={e=>{setMode(e.target.checked?"enrich":null);setApproved(false);}}/> Vorhandenen Datensatz ergänzen</label>
     <label className="importConfirm"><input type="checkbox" checked={mode==="create"} disabled={matches.length!==0} onChange={e=>{setMode(e.target.checked?"create":null);setApproved(false);}}/> Neuen Datensatz anlegen</label>
    </section>}
    {result?.notice&&<p>{result.notice}</p>}
