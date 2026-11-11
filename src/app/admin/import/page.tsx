@@ -3,8 +3,13 @@ import {useState} from "react";
 type Kind="device"|"board"|"component"|"repair";
 type Mode="create"|"enrich";
 type Match={id:string;name:string};
-type Reply={error?:string;data?:unknown;matches?:Match[];suggestions?:{id:string;name:string;manufacturer?:string;score:number}[];warning?:string;notice?:string;saved?:boolean;id?:string;kind?:Kind;mode?:Mode};
+type Reply={manufacturers?:string[];error?:string;data?:unknown;matches?:Match[];suggestions?:{id:string;name:string;manufacturer?:string;score:number}[];warning?:string;notice?:string;saved?:boolean;id?:string;kind?:Kind;mode?:Mode};
 const labels:Record<Kind,string>={device:"Gerät",board:"Platine",component:"Bauteil",repair:"Reparaturanleitung / Reparaturfall"};
+const starterManufacturers:Record<Exclude<Kind,"repair">,string[]>={
+ device:["Acer","Apple","Arduino","ASUS","Bosch","Dell","Dyson","HP","Lenovo","LG","Microsoft","Nintendo","Panasonic","Philips","Samsung","Siemens","Sony","Whirlpool"],
+ board:["Arduino","ASRock","ASUS","Espressif","Gigabyte","MSI","Raspberry Pi","Seeed Studio","STMicroelectronics","Texas Instruments"],
+ component:["Analog Devices","Broadcom","Infineon","Intel","Microchip Technology","Murata","Nexperia","NXP Semiconductors","onsemi","Renesas","ROHM","Samsung","STMicroelectronics","Texas Instruments","Vishay"]
+};
 const prefixes:Record<Kind,string>={device:"DEV",board:"BRD",component:"CMP",repair:"REP"};
 export default function AdminImportPage(){
  const [password,setPassword]=useState("");
@@ -12,24 +17,41 @@ export default function AdminImportPage(){
  const [mode,setMode]=useState<Mode|null>(null);
  const [selectedId,setSelectedId]=useState<string>("");
  const [json,setJson]=useState("");
+ const [manufacturer,setManufacturer]=useState("");
+ const [knownManufacturers,setKnownManufacturers]=useState<string[]>([]);
+ const [manufacturerNotice,setManufacturerNotice]=useState("");
  const [url,setUrl]=useState("");
  const [result,setResult]=useState<Reply|null>(null);
  const [busy,setBusy]=useState(false);
  const [approved,setApproved]=useState(false);
  const [previewed,setPreviewed]=useState(false);
  const reset=()=>{setResult(null);setMode(null);setSelectedId("");setApproved(false);setPreviewed(false);};
+ async function loadManufacturers(){
+  if(!password){setManufacturerNotice("Bitte zuerst den Administrator-Importschlüssel eingeben.");return;}
+  try{
+   const response=await fetch("/api/admin/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password,action:"manufacturers"})});
+   const reply:Reply=await response.json();
+   if(!response.ok)throw Error(reply.error||"Hersteller konnten nicht geladen werden.");
+   setKnownManufacturers(reply.manufacturers||[]);setManufacturerNotice("");
+  }catch(e){setManufacturerNotice(e instanceof Error?e.message:"Hersteller konnten nicht geladen werden.");}
+ }
  async function call(action:"fetch"|"preview"|"save"){
   setBusy(true);
   try{
    const data=action==="fetch"?undefined:JSON.parse(json);
-   const response=await fetch("/api/admin/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password,action,kind,mode,selectedId,url,data,confirm:action==="save"&&approved})});
+   const response=await fetch("/api/admin/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password,action,kind,mode,selectedId,url,data,manufacturer:kind==="repair"?"":manufacturer,confirm:action==="save"&&approved})});
    const reply:Reply=await response.json();setResult(reply);
-   if(action==="fetch"){if(reply.data)setJson(JSON.stringify(reply.data,null,2));setMode(null);setSelectedId("");setPreviewed(false);setApproved(false);}
+   if(action==="fetch"){if(reply.data){
+    setJson(JSON.stringify(reply.data,null,2));
+    const extracted=reply.data as Record<string,unknown>;
+    if(kind!=="repair"&&typeof extracted.manufacturer==="string"&&extracted.manufacturer.trim())setManufacturer(extracted.manufacturer.trim());
+   }setMode(null);setSelectedId("");setPreviewed(false);setApproved(false);}
    if(action==="preview"){setPreviewed(!!reply.matches);setSelectedId(reply.matches?.length===1?String(reply.matches[0].id):"");setMode(null);setApproved(false);}
    if(action==="save"){setPreviewed(false);setApproved(false);}
   }catch(e){setResult({error:e instanceof Error?e.message:"Fehler"});setPreviewed(false);}finally{setBusy(false);}
  }
  const matches=result?.matches||[];
+ const manufacturerOptions=kind==="repair"?[]:Array.from(new Map([...starterManufacturers[kind],...knownManufacturers].map(x=>[x.trim().toLocaleLowerCase("de"),x.trim()])).values()).sort((a,b)=>a.localeCompare(b,"de"));
  const eligible=previewed&&(mode==="create"?matches.length===0:mode==="enrich"&&!!selectedId);
  return <main className="shell page">
   <header className="topbar"><a className="brand" href="/">OpenRepair<span>DB</span></a><a href="/">← Startseite</a></header>
@@ -37,16 +59,22 @@ export default function AdminImportPage(){
   <p className="status">Administrator-Importschlüssel erforderlich. Neue und ergänzte Datensätze werden zur Prüfung vorgemerkt. Vorhandene Werte werden bei Ergänzungen nicht überschrieben.</p>
   <div className="importForm">
    <label>Was möchtest du importieren?
-    <select value={kind} onChange={e=>{setKind(e.target.value as Kind);reset();}}>
+    <select value={kind} onChange={e=>{setKind(e.target.value as Kind);setManufacturer("");reset();}}>
      {Object.entries(labels).map(([value,label])=><option key={value} value={value}>{label}</option>)}
     </select>
    </label>
    <label>Administrator-Importschlüssel<input type="password" autoComplete="off" value={password} onChange={e=>setPassword(e.target.value)}/></label>
+   {kind!=="repair"&&<label>Hersteller
+    <input type="text" list="import-manufacturer-options" autoComplete="off" placeholder="Hersteller eingeben oder auswählen, z. B. Arduino" value={manufacturer} onFocus={()=>{if(knownManufacturers.length===0)void loadManufacturers();}} onChange={e=>{setManufacturer(e.target.value);reset();}}/>
+    <datalist id="import-manufacturer-options">{manufacturerOptions.map(x=><option key={x} value={x}/>)}</datalist>
+    <span>Vorschläge aus der Datenbank und einer Startliste. Neue Hersteller können frei eingegeben werden.</span>
+   </label>}
+   {manufacturerNotice&&<p role="status">{manufacturerNotice}</p>}
    <label>HTTPS-Quelladresse (freigegebene Domains)<input type="url" placeholder="https://docs.arduino.cc/..." value={url} onChange={e=>{setUrl(e.target.value);reset();}}/></label>
    <button disabled={busy||!password||!url} onClick={()=>call("fetch")}>URL auslesen</button>
    <label>Strukturierte Daten (JSON)<textarea rows={18} spellCheck={false} value={json} onChange={e=>{setJson(e.target.value);reset();}} placeholder={JSON.stringify({manufacturer:"Arduino",model:"Arduino UNO R3",overview:"...",sourceUrl:"https://docs.arduino.cc/hardware/uno-rev3"},null,2)}/></label>
-   <p>Pflichtfelder: Bezeichnung, Hersteller (außer bei Reparaturen), HTTPS-Quellenadresse. Bei Reparaturen zusätzlich Symptome oder Maßnahmen. Die HTML-Erkennung kann den Hersteller nicht immer bestimmen – bitte selbst ergänzen.</p>
-   <button disabled={busy||!password||!json} onClick={()=>call("preview")}>Prüfen und Dubletten anzeigen</button>
+   <p>Pflichtfelder: Bezeichnung, Hersteller (außer bei Reparaturen), HTTPS-Quellenadresse. Bei Reparaturen zusätzlich Symptome oder Maßnahmen. Das Herstellerfeld hat Vorrang vor dem Herstellerwert im JSON.</p>
+   <button disabled={busy||!password||!json||(kind!=="repair"&&!manufacturer.trim())} onClick={()=>call("preview")}>Prüfen und Dubletten anzeigen</button>
    {previewed&&<section><h2>Dublettenprüfung: {labels[kind]}</h2>
     {matches.length===0?<p>Kein passender Datensatz gefunden.</p>:matches.map(x=><p key={x.id}>{prefixes[kind]}-{String(x.id).padStart(6,"0")} · {x.name}</p>)}
     {result?.warning&&<p role="status">{result.warning}</p>}
