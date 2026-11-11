@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: openrepairdb-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-openrepairdb}
+      POSTGRES_USER: ${POSTGRES_USER:-openrepairdb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openrepairdb} -d ${POSTGRES_DB:-openrepairdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - openrepairdb
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openrepairdb-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    networks:
+      - openrepairdb
+
+networks:
+  openrepairdb:
+    name: openrepairdb
+
+volumes:
+  postgres_data:
+    name: openrepairdb-postgres
