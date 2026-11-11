@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { pool } from "@/lib/db";
 import { entryHref, kindNames, kinds, publicId, type EntryKind } from "@/lib/entries";
-import { getDeviceGuide } from "@/lib/device-guides";
+
 
 type Props = { params: Promise<{ kind:string; id:string; slug:string }> };
 type Row = Record<string, unknown>;
@@ -25,7 +25,19 @@ export default async function EntryPage({params}:Props) {
   if (!result.rows.length) notFound();
   const r:Row = result.rows[0];
   const title = kind==="device" ? val(r.canonical_model_name) : kind==="board" ? val(r.board_identifier_original) : kind==="component" ? (val(r.part_number_original)||val(r.marking)||"Bauteil") : val(r.title);
-  const guide = kind==="device" ? getDeviceGuide(r.canonical_model_name) : null;
+  let guide: {overview:string;capabilities:string[];specifications:[string,string][];pinGroups:{name:string;description:string;pins:string}[];safety:string[];links:{label:string;url:string}[]} | null = null;
+  if(kind==="device") {
+    try {
+      const doc=await pool.query(`SELECT overview,capabilities,specifications,pin_groups,safety_notes,documentation_links FROM device_documentation WHERE device_id=$1 AND review_status='approved'`,[id]);
+      if(doc.rows[0]) {
+        const d=doc.rows[0];
+        guide={overview:d.overview,capabilities:d.capabilities,specifications:d.specifications,pinGroups:d.pin_groups,safety:d.safety_notes,links:d.documentation_links};
+      }
+    } catch(error) {
+      // During initial deployment the migration may not have run yet.
+      if((error as {code?:string}).code!=="42P01")throw error;
+    }
+  }
   const canonical = entryHref(kind,id,title);
   if (slug !== canonical.split("/").at(-1)) redirect(canonical);
   const links:{href:string;label:string}[]=[];
