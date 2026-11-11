@@ -10,9 +10,10 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
 
   if (q.trim()) {
     try {
+      const term = q.trim().slice(0, 120);
       const result = await pool.query(
-        "SELECT 'Gerät' AS kind, canonical_model_name AS label, COALESCE(description, '') AS detail FROM devices WHERE search_text ILIKE $1 LIMIT 20",
-        [`%${q.trim().replace(/[%_]/g, "\\$&")}%`]
+        "SELECT 'Gerät' AS kind, canonical_model_name AS label, COALESCE(description, '') AS detail FROM devices WHERE review_status = 'approved' AND search_text ILIKE $1 ESCAPE '\\\\' LIMIT 20",
+        [`%${term.replace(/[\\\\%_]/g, "\\\\$&")}%`]
       );
       results = result.rows;
       status = results.length ? `${results.length} Treffer` : "Noch keine passenden Einträge. Die Datenbank ist am Anfang noch leer.";
