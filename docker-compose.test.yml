@@ -29,7 +29,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "3001:3000"
+      - "1240:3000"
     networks:
       - internal
 
