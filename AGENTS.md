@@ -13,6 +13,8 @@ Read `docs/CURRENT_STATUS.md`, `docs/PROJECT_VISION.md`, `docs/DECISIONS.md`, `d
 - Before completing a meaningful task, update `docs/CURRENT_STATUS.md` and `docs/ROADMAP.md`; record major design decisions in `docs/DECISIONS.md`.
 - Always verify existing file content before edits, and check GitHub Actions and runtime results when available.
 
+- Administrator responsibilities, user management, password resets and permission rules are specified in `docs/ADMINISTRATION_AND_ROLES.md`. Consult it before implementing auth or admin features.
+
 ## Project entry points
 - GitHub: `spencerandhillAI/OpenRepairDB`
 - Documentation: `docs/PROJECT_VISION.md`, `docs/CURRENT_STATUS.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/IMPORT_PIPELINE.md`, `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`
