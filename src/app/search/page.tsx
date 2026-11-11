@@ -1,20 +1,22 @@
 import Link from "next/link";
 import { pool } from "@/lib/db";
 
+import { entryHref, type EntryKind } from "@/lib/entries";
+
 type SearchParams = Promise<{ q?: string }>;
 
 export default async function SearchPage({ searchParams }: { searchParams: SearchParams }) {
   const { q = "" } = await searchParams;
   let status = "Gib einen Suchbegriff ein.";
-  let results: { kind: string; label: string; detail: string }[] = [];
+  let results: { kind: EntryKind; id: string; label: string; detail: string }[] = [];
 
   if (q.trim()) {
     try {
       const term = q.trim().slice(0, 120);
       const result = await pool.query(
-        `SELECT kind, label, detail
+        `SELECT kind, id, label, detail
          FROM (
-           SELECT 'Gerät' AS kind,
+           SELECT 'device' AS kind, d.id::text AS id,
                   d.canonical_model_name AS label,
                   concat_ws(' · ', m.name, d.product_category, d.description) AS detail
            FROM devices d
@@ -29,13 +31,13 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
                )
              )
            UNION ALL
-           SELECT 'Platine', b.board_identifier_original,
+           SELECT 'board', b.id::text, b.board_identifier_original,
                   concat_ws(' · ', b.board_type, b.revision, b.notes)
            FROM boards b
            WHERE b.review_status = 'approved'
              AND position(lower($1) in lower(b.board_identifier_normalized)) > 0
            UNION ALL
-           SELECT 'Bauteil', coalesce(c.part_number_original, c.marking, 'Bauteil'),
+           SELECT 'component', c.id::text, coalesce(c.part_number_original, c.marking, 'Bauteil'),
                   concat_ws(' · ', c.marking, c.component_type, c.description)
            FROM components c
            WHERE c.review_status = 'approved'
@@ -44,7 +46,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
                OR position(lower($1) in lower(coalesce(c.marking, ''))) > 0
              )
            UNION ALL
-           SELECT 'Reparaturfall', rc.title,
+           SELECT 'repair', rc.id::text, rc.title,
                   concat_ws(' · ', rc.fault_code, rc.symptoms, rc.diagnosis)
            FROM repair_cases rc
            WHERE rc.review_status = 'approved'
@@ -71,6 +73,6 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
     <h1 className="pageTitle">Suche</h1>
     <form className="search" action="/search"><input name="q" defaultValue={q} placeholder="Modell, Platine, Bauteil oder Fehlercode …" /><button type="submit">Suchen →</button></form>
     <p className="status">{status}</p>
-    {results.map((item, index) => <article className="result" key={index}><span>{item.kind}</span><h2>{item.label}</h2><p>{item.detail}</p></article>)}
+    {results.map((item) => <Link className="result" style={{display:"block",color:"inherit",textDecoration:"none"}} href={entryHref(item.kind, item.id, item.label)} key={`${item.kind}-${item.id}`}><span>{({device:"Gerät / Maschine",board:"Platine",component:"Bauteil",repair:"Reparaturfall"} as const)[item.kind]} · {({device:"DEV",board:"BRD",component:"CMP",repair:"REP"} as const)[item.kind]}-{item.id.padStart(6,"0")}</span><h2>{item.label}</h2><p>{item.detail}</p><p style={{marginTop:12}}>Details ansehen →</p></Link>)}
   </main>;
 }
