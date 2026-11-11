@@ -1,0 +1,104 @@
+{
+  "overview": "Der Arduino UNO R3 ist ein programmierbares Mikrocontroller-Entwicklungsboard auf Basis des ATmega328P. Er eignet sich zum Lernen, für Prototypen und zur Steuerung von Sensoren, LEDs, Motorsteuerungen und anderen elektronischen Schaltungen. Programme werden über USB übertragen.",
+  "capabilities": [
+    "Digitale Signale einlesen und ausgeben, etwa für Taster und LEDs.",
+    "Sechs analoge Eingänge für Sensorwerte nutzen.",
+    "PWM-Ausgänge zur Ansteuerung geeigneter Treiberschaltungen verwenden.",
+    "Über UART, SPI und I²C mit weiteren Bausteinen kommunizieren.",
+    "Über USB programmieren; zusätzlich sind Strombuchse und ICSP-Anschluss vorhanden."
+  ],
+  "specifications": [
+    [
+      "Mikrocontroller",
+      "ATmega328P"
+    ],
+    [
+      "Logikpegel",
+      "5 V"
+    ],
+    [
+      "Taktfrequenz",
+      "16 MHz"
+    ],
+    [
+      "Digitale Ein-/Ausgänge",
+      "14 (D0–D13)"
+    ],
+    [
+      "PWM-Ausgänge",
+      "6 (D3, D5, D6, D9, D10, D11)"
+    ],
+    [
+      "Analoge Eingänge",
+      "6 (A0–A5)"
+    ],
+    [
+      "Flash-Speicher",
+      "32 KB (davon 0,5 KB Bootloader)"
+    ],
+    [
+      "SRAM",
+      "2 KB"
+    ],
+    [
+      "EEPROM",
+      "1 KB"
+    ],
+    [
+      "USB",
+      "USB Typ B"
+    ]
+  ],
+  "pinGroups": [
+    {
+      "name": "Digitale Anschlüsse",
+      "pins": "D0–D13",
+      "description": "Digitale Ein-/Ausgänge. D0 (RX) und D1 (TX) dienen auch der seriellen UART-Kommunikation."
+    },
+    {
+      "name": "PWM",
+      "pins": "D3, D5, D6, D9, D10, D11",
+      "description": "PWM-fähige Digitalpins, gekennzeichnet durch ~ auf der Platine."
+    },
+    {
+      "name": "Analoge Eingänge",
+      "pins": "A0–A5",
+      "description": "Analoge Messkanäle; A4 ist zusätzlich SDA und A5 zusätzlich SCL für I²C."
+    },
+    {
+      "name": "SPI",
+      "pins": "D10 (SS), D11 (MOSI), D12 (MISO), D13 (SCK)",
+      "description": "SPI-Schnittstelle; Signale sind auch am ICSP-Header verfügbar."
+    },
+    {
+      "name": "Versorgung und Referenz",
+      "pins": "5V, 3.3V, GND, VIN, RESET, IOREF, AREF",
+      "description": "Versorgung, Masse, Reset und Analogreferenz. Die genaue Funktion und zulässige Beschaltung im Original-Pinout prüfen."
+    }
+  ],
+  "safety": [
+    "Die digitalen Ein-/Ausgänge arbeiten mit 5-V-Logik. Keine höheren Spannungen direkt an Signalpins anlegen.",
+    "Ein GPIO ist keine Stromversorgung für größere Lasten: Motoren und Relais nur mit geeigneten Treibern betreiben.",
+    "Vor Messungen an der Versorgung die Pinbelegung im Original-Schaltplan prüfen. Keine Netzspannung an das Board anschließen."
+  ],
+  "links": [
+    {
+      "label": "Arduino: UNO R3 – offizielle Geräteseite",
+      "url": "https://docs.arduino.cc/hardware/uno-rev3"
+    },
+    {
+      "label": "UNO R3 – vollständiges Pinout (PDF)",
+      "url": "https://docs.arduino.cc/resources/pinouts/A000066-full-pinout.pdf"
+    },
+    {
+      "label": "UNO R3 – Schaltplan (PDF)",
+      "url": "https://docs.arduino.cc/resources/schematics/A000066-schematics.pdf"
+    },
+    {
+      "label": "UNO R3 – technisches Datenblatt (PDF)",
+      "url": "https://docs.arduino.cc/resources/datasheets/A000066-datasheet.pdf"
+    }
+  ],
+  "model": "Arduino UNO R3",
+  "sourceUrl": "https://docs.arduino.cc/hardware/uno-rev3"
+}
