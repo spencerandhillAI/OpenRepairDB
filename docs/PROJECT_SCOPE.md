@@ -64,3 +64,16 @@ Public contributions should enter a reviewable state. Roles should include visit
 ## Success criteria
 
 A user enters a model number and quickly discovers the correct device, related boards and components, repair cases, known faults, relevant documents and images, and the origin and reliability of each item.
+
+## Future roadmap — cross-manufacturer spare parts and compatibility
+
+Extend the existing `compatible-with`, `same-as` and `replaces` relationships into a searchable spare-parts and interchangeability catalogue, integrated into OpenRepairDB rather than a separate product.
+
+- Search by device/model, original spare-part number, assembly or component identifier.
+- Show original parts, verified equivalent parts, compatible alternatives and replacement/supersession chains across manufacturers.
+- Link compatibility claims to specific device variants, board revisions and applicable conditions; distinguish mechanical, electrical and functional compatibility.
+- Record evidence, provenance, confidence, review status and conflicting reports; do not infer interchangeability solely from similar part numbers.
+- Allow human-readable views and a structured, documented API for external tools and AI agents.
+- Optionally add supplier availability and purchase links later, subject to licensing and neutrality; no marketplace required.
+
+**Timing:** Post-MVP; first establish reliable device/part identifiers and reviewed relationship data.
