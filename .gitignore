@@ -1,0 +1,30 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencies and build output
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# Logs and temporary files
+*.log
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Local data and uploads
+uploads/
+storage/
+postgres-data/
+*.dump
+*.sql.gz
+
+# Editor / OS
+.vscode/
+.idea/
