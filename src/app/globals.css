@@ -53,3 +53,5 @@ footer{border-top:1px solid #ffffff18;padding:25px 0 32px;display:flex;justify-c
 .importForm button:disabled{opacity:.45;cursor:not-allowed}
 .importForm .importConfirm{flex-direction:row;align-items:flex-start;font-weight:400}
 .importConfirm input{margin-top:6px}
+
+.importForm select{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:14px;font:inherit}
