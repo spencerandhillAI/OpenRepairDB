@@ -15,6 +15,10 @@
 - Media uploads, permissions and moderation per `docs/MEDIA_AND_PERMISSIONS.md`.
 - Continue linked-data pilot without fabricated relationships; see `docs/LINKED_DATA_PILOT.md`.
 
+## Planned extensions
+- **Cross-manufacturer spare-parts and compatibility catalogue:** Extend OpenRepairDB's device, board, assembly and component relationships to find original spare parts, equivalent replacements and compatible alternatives across manufacturers. Search by device/model and part number; record exact applicability, revision, compatibility conditions, sources, confidence and review status. Provide human-readable results and a structured API for AI agents. Optional supplier links later; not a separate marketplace.
+- **Dedicated fault-code search:** Add a separate fault-code search area supporting (a) code alone, (b) code plus manufacturer/category/model, and (c) manufacturer-only browsing without an exact model number. If a specific device is missing, surface fault-code matches from similar models or model families, explicitly labelled as unverified for that device. Distinguish identical codes across manufacturers and models; show meanings, possible causes, repair references, sources and confidence. Make results accessible to humans and future AI/API clients.
+
 ## Long term
 - Community submissions, verified repair knowledge, traceable technical documentation and sustainable open-source maintenance.
 
