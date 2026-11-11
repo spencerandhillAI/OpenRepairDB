@@ -5,7 +5,17 @@ export const dynamic="force-dynamic";
 export async function POST(req:NextRequest){
  try{
  const origin=req.headers.get("origin");
- if(!origin || origin!==req.nextUrl.origin)return NextResponse.json({error:"Ungültige Anfragequelle."},{status:403});
+ // Reverse proxies may expose an internal req.nextUrl.origin. Validate against
+ // the actual request Host instead, and reject missing/mismatched origins.
+ const host=req.headers.get("host");
+ let sameOrigin=false;
+ try {
+   if(origin && host){
+     const parsed=new URL(origin);
+     sameOrigin=(parsed.protocol==="http:" || parsed.protocol==="https:") && parsed.host.toLowerCase()===host.toLowerCase();
+   }
+ } catch { /* malformed Origin */ }
+ if(!sameOrigin)return NextResponse.json({error:"Ungültige Anfragequelle."},{status:403});
  if(Number(req.headers.get("content-length")||0)>1_100_000)return NextResponse.json({error:"Anfrage zu groß."},{status:413});
  const input=await req.json();
  if(!adminAuthorized(input.password))return NextResponse.json({error:"Administrator-Zugang verweigert."},{status:403,headers:{"Cache-Control":"no-store"}});
